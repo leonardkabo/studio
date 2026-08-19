@@ -1,0 +1,6 @@
+{
+  "name": "Kaboom Studio",
+  "description": "Studio de retouche photo événementielle professionnel, automatique et 100% gratuit alimenté par l'IA",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

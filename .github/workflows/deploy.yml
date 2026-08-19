@@ -1,0 +1,50 @@
+name: Déploiement Automatique vers Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    name: Déploiement Continu (CI/CD)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code source
+        uses: actions/checkout@v4
+
+      - name: Déployer sur le serveur VPS Hostinger via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            echo "🚀 Début du déploiement de studio.leonardkabo.cloud sur Hostinger VPS..."
+            
+            # Aller dans le dossier du projet sur le serveur
+            cd /var/www/studio.leonardkabo.cloud || cd ~/studio.leonardkabo.cloud || {
+              echo "❌ Répertoire introuvable sur le VPS. Vérifiez le chemin d'installation."
+              exit 1
+            }
+
+            # Récupérer les dernières modifications depuis GitHub
+            git fetch origin
+            git reset --hard origin/main || git reset --hard origin/master
+
+            # Si utilisation de Docker Compose (Recommandé) :
+            if [ -f "docker-compose.yml" ]; then
+              echo "🐳 Reconstruction et redémarrage du conteneur Docker..."
+              docker compose up -d --build --remove-orphans
+            else
+              # Alternative PM2 si Docker n'est pas utilisé :
+              echo "⚡ Mise à jour et redémarrage via PM2..."
+              npm ci
+              npm run build
+              pm2 reload studio_leonardkabo || pm2 start dist/server.cjs --name studio_leonardkabo
+            fi
+
+            echo "✅ Déploiement terminé avec succès sur studio.leonardkabo.cloud !"

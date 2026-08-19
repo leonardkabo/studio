@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Caveat:wght@500;700&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=Pacifico&family=Sacramento&family=Playfair+Display:ital,wght@0,600;1,600&family=Cinzel:wght@700&family=Montserrat:wght@600;800&display=swap');
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Light Theme overrides for crisp readability */
+.light {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/* Range input styling in light mode */
+.light input[type="range"] {
+  background-color: #cbd5e1;
+}
+
+.dark input[type="range"] {
+  background-color: #1e293b;
+}
+
+/* Smooth theme transitions */
+body {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
