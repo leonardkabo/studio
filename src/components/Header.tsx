@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { LocalCloudStorageStats } from "../types";
 import { useTheme } from "../context/ThemeContext";
-import defaultAppLogo from "../assets/images/amour_et_vie_30_ans_logo_1787222546850.jpg";
+import defaultAppLogo from "../../logo.png";
 
 export interface HeaderProps {
   projectTitle?: string;
