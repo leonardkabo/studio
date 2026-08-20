@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { LocalCloudStorageStats } from "../types";
 import { useTheme } from "../context/ThemeContext";
+import defaultAppLogo from "../assets/images/amour_et_vie_30_ans_logo_1787222546850.jpg";
 
 export interface HeaderProps {
   projectTitle?: string;
@@ -65,6 +66,34 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { theme, toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [customLogoUrl, setCustomLogoUrl] = React.useState<string>(() => {
+    try {
+      return localStorage.getItem("studio_custom_logo") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          setCustomLogoUrl(result);
+          try {
+            localStorage.setItem("studio_custom_logo", result);
+          } catch (err) {
+            console.warn("Storage quota exceeded", err);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const stats = storageStats || {
     localProjectsCount: 0,
@@ -100,15 +129,36 @@ export const Header: React.FC<HeaderProps> = ({
     >
       {/* Brand & Title */}
       <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-violet-500 to-amber-400 p-0.5 shadow-md shadow-indigo-500/20 shrink-0">
-          <div
-            className={`w-full h-full rounded-[10px] flex items-center justify-center ${
-              isLight ? "bg-slate-50" : "bg-slate-950"
-            }`}
-          >
-            <Sparkles className="w-5 h-5 text-indigo-500 animate-pulse" />
+        {/* Circular Logo with Rounded Borders & Clear Visual Depth */}
+        <div
+          onClick={() => logoInputRef.current?.click()}
+          className="relative group cursor-pointer"
+          title="Logo Studio (Cliquer pour changer ou importer un logo personnalisé)"
+        >
+          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-500 to-amber-400 p-[2.5px] shadow-lg shadow-indigo-500/30 shrink-0 transition-transform group-hover:scale-105">
+            <div
+              className={`w-full h-full rounded-full flex items-center justify-center overflow-hidden border border-white/30 shadow-inner ${
+                isLight ? "bg-slate-900" : "bg-slate-950"
+              }`}
+            >
+              <img
+                src={customLogoUrl || defaultAppLogo || "/logo.png"}
+                alt="Logo Studio"
+                className="w-full h-full object-cover rounded-full"
+                referrerPolicy="no-referrer"
+              />
+            </div>
           </div>
+
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleLogoUpload}
+          />
         </div>
+
         <div>
           <div className="flex items-center space-x-2">
             <h1
