@@ -1,0 +1,31 @@
+# --- Stage 1 : Construction (Build) ---
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Utilisation de npm install à la place de npm ci
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+# --- Stage 2 : Exécution (Production) ---
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server.ts ./
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

@@ -5,25 +5,28 @@ services:
       dockerfile: Dockerfile
     container_name: studio
     restart: always
+    ports:
+      - "127.0.0.1:3005:3000"
     environment:
       - NODE_ENV=production
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PORT=3000
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - APP_URL=https://studio.leonardkabo.cloud
-    volumes:
-      # Persistance de la base de données et des fichiers envoyés
-      
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     networks:
       - traefik-network
     labels:
       - "traefik.enable=true"
-      # On force Traefik à utiliser ce réseau pour la communication interne
       - "traefik.docker.network=traefik-network"
-      # Configuration du domaine
       - "traefik.http.routers.studio.rule=Host(`studio.leonardkabo.cloud`)"
       - "traefik.http.routers.studio.entrypoints=websecure"
-      # Correction : On utilise 'mytlschallenge' trouvé via le docker inspect
       - "traefik.http.routers.studio.tls.certresolver=mytlschallenge"
-      # Port interne de ton application
       - "traefik.http.services.studio.loadbalancer.server.port=3000"
 
 networks:
