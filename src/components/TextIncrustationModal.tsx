@@ -1210,7 +1210,7 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
                 className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/30 transition cursor-pointer"
                 title="Modèle réseaux sociaux alignés + nom (Amouretvie Abms)"
               >
-                ★ Amouretvie (FB+YT+IG+X+Mess+TikTok)
+                ★ Amouretvie
               </button>
               <button
                 onClick={() => handleApplyPresetTemplate("camera-pro")}
