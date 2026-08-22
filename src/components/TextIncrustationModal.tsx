@@ -1167,7 +1167,7 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
               }`}
             >
               <PenTool className="w-3.5 h-3.5" />
-              <span>1. Signature Multi-Logos & Texte</span>
+              <span>1. Signature Logos & Texte</span>
             </button>
 
             <button
@@ -1203,12 +1203,12 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
           {mode === "signature" && (
             <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar">
               <span className={`text-[11px] font-semibold mr-1 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                Modèles 1-Clic :
+                Modèles au Clic :
               </span>
               <button
                 onClick={() => handleApplyPresetTemplate("amouretvie")}
                 className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/30 transition cursor-pointer"
-                title="Modèle réseaux sociaux alignés + nom (Amouretvie Abms)"
+                title="Modèle Amouretvie Abms"
               >
                 ★ Amouretvie
               </button>
@@ -1216,13 +1216,13 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
                 onClick={() => handleApplyPresetTemplate("camera-pro")}
                 className="px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 border border-indigo-500/30 transition cursor-pointer"
               >
-                Photographe Calligraphie
+                Photo-Calligraphie
               </button>
               <button
                 onClick={() => handleApplyPresetTemplate("contact-all")}
                 className="px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 transition cursor-pointer"
               >
-                Contact Pro (Web+Tél+IG)
+                Contact Pro 
               </button>
             </div>
           )}
