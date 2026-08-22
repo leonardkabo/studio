@@ -298,6 +298,23 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
   const [savePresetName, setSavePresetName] = useState<string>("");
   const [saveAsDefaultCheck, setSaveAsDefaultCheck] = useState<boolean>(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+  const [isSignaturesMenuOpen, setIsSignaturesMenuOpen] = useState<boolean>(false);
+  const signaturesMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close signatures dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (signaturesMenuRef.current && !signaturesMenuRef.current.contains(event.target as Node)) {
+        setIsSignaturesMenuOpen(false);
+      }
+    };
+    if (isSignaturesMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isSignaturesMenuOpen]);
 
   const showFeedbackToast = (message: string) => {
     setFeedbackToast(message);
@@ -1125,18 +1142,12 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base font-bold">Studio Signature, Filigrane & Logos Live</h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30">
-                  Multi-Logos & 9 Positions
-                </span>
                 {(hasAppliedSignature || baseImageBeforeSignature) && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-violet-500/10 text-violet-400 border border-violet-500/30">
                     ✏️ Modification Active (Image Propre)
                   </span>
                 )}
               </div>
-              <p className={`text-xs ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                Alignement horizontal/vertical des logos sociaux (FB, YouTube, Instagram, X, TikTok...) et textes
-              </p>
             </div>
           </div>
 
@@ -1199,31 +1210,164 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
             </button>
           </div>
 
-          {/* Quick 1-Click Templates */}
+          {/* Mes Signatures Manager (Placé en haut à droite avec affichage au clic) */}
           {mode === "signature" && (
-            <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar">
-              <span className={`text-[11px] font-semibold mr-1 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                Modèles au Clic :
-              </span>
+            <div className="relative flex items-center space-x-1.5" ref={signaturesMenuRef}>
               <button
-                onClick={() => handleApplyPresetTemplate("amouretvie")}
-                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/30 transition cursor-pointer"
-                title="Modèle Amouretvie Abms"
+                onClick={() => setIsSignaturesMenuOpen(!isSignaturesMenuOpen)}
+                className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-xs ${
+                  isSignaturesMenuOpen
+                    ? "bg-amber-500 text-slate-950 border-amber-400 font-bold"
+                    : activeSavedPresetId
+                    ? isLight
+                      ? "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                      : "bg-amber-950/50 text-amber-300 border-amber-800 hover:bg-amber-900/60"
+                    : isLight
+                    ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                    : "bg-slate-900 text-slate-300 border-slate-750 hover:bg-slate-800"
+                }`}
+                title="Afficher et sélectionner vos signatures enregistrées"
               >
-                ★ Amouretvie
+                <BookmarkCheck className="w-3.5 h-3.5 text-amber-500" />
+                <span>
+                  Mes Signatures ({savedSignatures.length})
+                  {activeSavedPresetId && (
+                    <span className="ml-1 text-[11px] opacity-80 font-normal">
+                      • {savedSignatures.find((s) => s.id === activeSavedPresetId)?.name || "Active"}
+                    </span>
+                  )}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isSignaturesMenuOpen ? "rotate-180" : ""}`} />
               </button>
+
               <button
-                onClick={() => handleApplyPresetTemplate("camera-pro")}
-                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 border border-indigo-500/30 transition cursor-pointer"
+                onClick={handleStartNewBlankSignature}
+                className={`py-1.5 px-2.5 rounded-xl border text-xs font-semibold transition flex items-center space-x-1 cursor-pointer ${
+                  isLight
+                    ? "bg-white hover:bg-slate-100 text-slate-700 border-slate-300"
+                    : "bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700"
+                }`}
+                title="Créer une nouvelle signature à partir de zéro"
               >
-                Photo-Calligraphie
+                <PlusCircle className="w-3.5 h-3.5 text-indigo-400" />
+                <span>+ Nouvelle</span>
               </button>
+
               <button
-                onClick={() => handleApplyPresetTemplate("contact-all")}
-                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 transition cursor-pointer"
+                onClick={() => {
+                  setSavePresetName(text ? `Signature ${text}` : "Ma Signature");
+                  setIsSaveDialogOpen(true);
+                }}
+                className="py-1.5 px-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center space-x-1 cursor-pointer shadow-xs transition"
+                title="Enregistrer cette configuration"
               >
-                Contact Pro 
+                <Save className="w-3.5 h-3.5" />
+                <span>Enregistrer</span>
               </button>
+
+              {activeSavedPresetId && (
+                <button
+                  onClick={handleUpdateActivePreset}
+                  className="py-1.5 px-2.5 rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white flex items-center space-x-1 cursor-pointer shadow-xs transition"
+                  title="Mettre à jour la signature enregistrée"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Mettre à jour</span>
+                </button>
+              )}
+
+              {/* Popover list of saved signatures */}
+              {isSignaturesMenuOpen && (
+                <div
+                  className={`absolute right-0 top-full mt-2 w-80 max-h-96 rounded-2xl shadow-2xl border p-2.5 z-50 flex flex-col space-y-2 ${
+                    isLight
+                      ? "bg-white border-slate-200 text-slate-900 shadow-slate-400/30"
+                      : "bg-slate-900 border-slate-750 text-slate-100 shadow-black/80"
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-xs flex items-center space-x-1.5 text-amber-500">
+                      <BookmarkCheck className="w-4 h-4" />
+                      <span>Mes Signatures Enregistrées</span>
+                    </span>
+                    <button
+                      onClick={() => setIsSignaturesMenuOpen(false)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {savedSignatures.length === 0 ? (
+                    <div className="py-4 text-center text-xs text-slate-400 space-y-2">
+                      <p>Aucune signature enregistrée.</p>
+                      <button
+                        onClick={() => {
+                          setIsSignaturesMenuOpen(false);
+                          setSavePresetName(text ? `Signature ${text}` : "Ma Signature");
+                          setIsSaveDialogOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shadow-xs"
+                      >
+                        Enregistrer la signature actuelle
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="overflow-y-auto max-h-64 space-y-1.5 pr-1 no-scrollbar">
+                      {savedSignatures.map((preset) => {
+                        const isActive = activeSavedPresetId === preset.id;
+                        return (
+                          <div
+                            key={preset.id}
+                            onClick={() => {
+                              handleApplySavedPreset(preset);
+                              setIsSignaturesMenuOpen(false);
+                            }}
+                            className={`p-2.5 rounded-xl border flex items-center justify-between transition cursor-pointer group ${
+                              isActive
+                                ? isLight
+                                  ? "bg-amber-100/90 border-amber-400 text-amber-950 font-bold shadow-xs"
+                                  : "bg-amber-950/70 border-amber-500 text-amber-200 font-bold shadow-xs"
+                                : isLight
+                                ? "bg-slate-50 hover:bg-amber-50/70 border-slate-200 hover:border-amber-300 text-slate-800"
+                                : "bg-slate-850 hover:bg-slate-800 border-slate-750 hover:border-amber-700 text-slate-200"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2 truncate">
+                              {preset.isDefault ? (
+                                <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />
+                              ) : (
+                                <Bookmark className="w-4 h-4 text-slate-400 shrink-0" />
+                              )}
+                              <span className="text-xs truncate">{preset.name}</span>
+                            </div>
+
+                            <div className="flex items-center space-x-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={(e) => handleToggleDefaultPreset(preset.id, e)}
+                                className={`p-1 rounded-md transition cursor-pointer ${
+                                  preset.isDefault ? "text-amber-500" : "text-slate-400 hover:text-amber-500"
+                                }`}
+                                title={preset.isDefault ? "Signature par défaut" : "Définir par défaut"}
+                              >
+                                <Star className={`w-3.5 h-3.5 ${preset.isDefault ? "fill-amber-500" : ""}`} />
+                              </button>
+
+                              <button
+                                onClick={(e) => handleDeleteSavedPreset(preset.id, e)}
+                                className="p-1 rounded-md text-slate-400 hover:text-rose-500 transition cursor-pointer"
+                                title="Supprimer cette signature"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1232,175 +1376,6 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 px-5 flex-1 min-h-0 overflow-hidden pb-1">
           {/* Controls Column (5 cols) */}
           <div className="lg:col-span-5 flex flex-col space-y-3 overflow-y-auto pr-1 text-xs no-scrollbar">
-            {/* 0. Saved Signatures Presets Manager (User Requested) */}
-            {mode === "signature" && (
-              <div
-                className={`p-3 rounded-xl border space-y-2.5 transition-all ${
-                  isLight
-                    ? "bg-amber-50/50 border-amber-200/80 shadow-xs"
-                    : "bg-amber-950/20 border-amber-800/40 shadow-xs"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5">
-                    <BookmarkCheck className="w-4 h-4 text-amber-500" />
-                    <span className="font-bold text-xs">
-                      Mes Signatures Enregistrées ({savedSignatures.length}) :
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-1.5">
-                    {/* Add / New Blank button */}
-                    <button
-                      onClick={handleStartNewBlankSignature}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center space-x-1 cursor-pointer ${
-                        isLight
-                          ? "bg-white hover:bg-slate-100 text-slate-700 border-slate-300"
-                          : "bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700"
-                      }`}
-                      title="Créer une nouvelle signature à partir de zéro"
-                    >
-                      <PlusCircle className="w-3 h-3 text-indigo-400" />
-                      <span>+ Nouvelle</span>
-                    </button>
-
-                    {/* Save Current Button */}
-                    <button
-                      onClick={() => {
-                        setSavePresetName(text ? `Signature ${text}` : "Ma Signature");
-                        setIsSaveDialogOpen(true);
-                      }}
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center space-x-1 cursor-pointer shadow-xs transition"
-                      title="Enregistrer cette configuration pour la réutiliser sur toutes vos prochaines photos"
-                    >
-                      <Save className="w-3 h-3" />
-                      <span>💾 Enregistrer</span>
-                    </button>
-
-                    {/* Update Current Preset Button if one is loaded */}
-                    {activeSavedPresetId && (
-                      <button
-                        onClick={handleUpdateActivePreset}
-                        className="px-2 py-1 rounded-lg text-[10px] font-bold bg-violet-600 hover:bg-violet-500 text-white flex items-center space-x-1 cursor-pointer shadow-xs transition"
-                        title="Mettre à jour la signature enregistrée avec vos modifications actuelles"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        <span>Mettre à jour</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Presets List */}
-                {savedSignatures.length === 0 ? (
-                  <div
-                    className={`p-2.5 rounded-lg border text-center text-[11px] ${
-                      isLight
-                        ? "bg-white/80 border-amber-200 text-slate-600"
-                        : "bg-slate-900/80 border-amber-800/40 text-slate-400"
-                    }`}
-                  >
-                    <p>
-                      💡 <b>Astuce :</b> Vous n'avez pas encore de signature enregistrée. Cliquez sur <b>« 💾 Enregistrer »</b> pour sauvegarder vos réglages et les appliquer en 1 clic sur toutes vos futures images !
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-0.5 no-scrollbar">
-                    {savedSignatures.map((preset) => {
-                      const isActive = activeSavedPresetId === preset.id;
-                      const activeIconsCount = preset.iconsList?.filter((i) => i.enabled).length || 0;
-
-                      return (
-                        <div
-                          key={preset.id}
-                          onClick={() => handleApplySavedPreset(preset)}
-                          className={`p-2 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer group ${
-                            isActive
-                              ? isLight
-                                ? "bg-amber-100/90 border-amber-400 shadow-xs ring-1 ring-amber-400"
-                                : "bg-amber-950/50 border-amber-500 shadow-xs ring-1 ring-amber-500"
-                              : isLight
-                              ? "bg-white hover:bg-slate-50 border-slate-200 hover:border-amber-300"
-                              : "bg-slate-900 hover:bg-slate-850 border-slate-800 hover:border-amber-800"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-1">
-                            <div className="flex items-center space-x-1 overflow-hidden">
-                              {preset.isDefault && (
-                                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                              )}
-                              <span
-                                className={`font-bold text-[11px] truncate ${
-                                  isActive
-                                    ? "text-amber-700 dark:text-amber-300"
-                                    : isLight
-                                    ? "text-slate-800"
-                                    : "text-slate-200"
-                                }`}
-                                title={preset.name}
-                              >
-                                {preset.name}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center space-x-1 shrink-0">
-                              {/* Star Default Button */}
-                              <button
-                                onClick={(e) => handleToggleDefaultPreset(preset.id, e)}
-                                className={`p-1 rounded-md transition cursor-pointer ${
-                                  preset.isDefault
-                                    ? "text-amber-500 hover:bg-amber-500/20"
-                                    : "text-slate-400 hover:text-amber-500 hover:bg-slate-200 dark:hover:bg-slate-800"
-                                }`}
-                                title={
-                                  preset.isDefault
-                                    ? "Signature par défaut sur les nouvelles images"
-                                    : "Définir comme signature par défaut"
-                                }
-                              >
-                                <Star
-                                  className={`w-3 h-3 ${
-                                    preset.isDefault ? "fill-amber-500" : ""
-                                  }`}
-                                />
-                              </button>
-
-                              {/* Delete Button */}
-                              <button
-                                onClick={(e) => handleDeleteSavedPreset(preset.id, e)}
-                                className="p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
-                                title="Supprimer cette signature enregistrée"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-                            <span className="truncate max-w-[120px]">
-                              {activeIconsCount} logo(s) • {preset.anchorPosition || "bas-droite"}
-                            </span>
-
-                            <span
-                              className={`font-semibold text-[9px] px-1.5 py-0.2 rounded-md ${
-                                isActive
-                                  ? "bg-amber-500 text-slate-950"
-                                  : isLight
-                                  ? "bg-slate-100 text-slate-600 group-hover:bg-amber-100 group-hover:text-amber-700"
-                                  : "bg-slate-800 text-slate-300 group-hover:bg-amber-950 group-hover:text-amber-300"
-                              }`}
-                            >
-                              {isActive ? "Active ✓" : "Charger"}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* 1. Logos & Icônes Sociaux Section */}
             {mode === "signature" && (
               <div
@@ -1444,15 +1419,8 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
                   </div>
                 </div>
 
-                {/* Instructions & Visual Flow */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                    <span>Ordre d'alignement (glissez ou utilisez les flèches ◀ ▶) :</span>
-                    <span className="text-indigo-400 font-semibold">{iconsList.length} éléments</span>
-                  </div>
-
-                  {/* Active Icons Sequence Cards (Reorderable via Drag & Drop / Move buttons / Extremity buttons) */}
-                  <div className="flex flex-col space-y-1.5 max-h-52 overflow-y-auto pr-0.5 no-scrollbar">
+                {/* Active Icons Sequence Cards (Reorderable via Drag & Drop / Move buttons / Extremity buttons) */}
+                <div className="flex flex-col space-y-1.5 max-h-52 overflow-y-auto pr-0.5 no-scrollbar">
                     {iconsList.map((icon, idx) => {
                       const scale = icon.scaleMultiplier || 1.0;
                       const isZoomed = scale > 1.0;
@@ -1604,7 +1572,6 @@ export const TextIncrustationModal: React.FC<TextIncrustationModalProps> = ({
                       );
                     })}
                   </div>
-                </div>
 
                 {/* Add Builtin Quick Icons Bar */}
                 <div className="space-y-1">

@@ -9,6 +9,9 @@ import {
   Activity,
   Columns,
   Eye,
+  EyeOff,
+  ChevronLeft,
+  ChevronRight,
   Wand2,
   Upload,
   Sparkles,
@@ -92,8 +95,9 @@ export const MainCanvas: React.FC<MainCanvasProps> = ({
   const [zoom, setZoom] = useState<number>(1);
   const [splitPos, setSplitPos] = useState<number>(50); // percentage 0 - 100
   const [isDraggingSplit, setIsDraggingSplit] = useState<boolean>(false);
-  const [showHistogram, setShowHistogram] = useState<boolean>(true);
+  const [showHistogram, setShowHistogram] = useState<boolean>(false);
   const [healingToast, setHealingToast] = useState<string | null>(null);
+  const [isLateralToolbarOpen, setIsLateralToolbarOpen] = useState<boolean>(true);
 
   // Active Tool Mode: normal / select / crop / transform_layer
   const [activeTool, setActiveTool] = useState<"pointer" | "crop" | "move">("pointer");
@@ -589,138 +593,177 @@ export const MainCanvas: React.FC<MainCanvasProps> = ({
         isLight ? "bg-slate-200" : "bg-slate-950"
       }`}
     >
-      {/* Top Floating Utility Canvas Control Toolbar */}
-      <div
-        className={`absolute top-3 left-3 z-30 flex items-center space-x-1.5 rounded-xl p-1 backdrop-blur-md shadow-xl text-xs transition-colors ${
-          isLight
-            ? "bg-white/90 border border-slate-300 text-slate-700 shadow-slate-300/50"
-            : "bg-slate-900/90 border border-slate-800/90 text-slate-300"
-        }`}
-      >
-        <button
-          onClick={handleZoomIn}
-          className={`p-1.5 rounded-lg transition cursor-pointer ${
-            isLight ? "hover:bg-slate-100 text-slate-700" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+      {/* Left Lateral Collapsible Utility Toolbar (du haut vers le bas) */}
+      {isLateralToolbarOpen ? (
+        <div
+          className={`absolute left-3 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center space-y-1 rounded-2xl p-1.5 backdrop-blur-md shadow-2xl text-xs transition-all border ${
+            isLight
+              ? "bg-white/95 border-slate-300 text-slate-700 shadow-slate-300/60"
+              : "bg-slate-900/95 border-slate-800 text-slate-300 shadow-black/50"
           }`}
-          title="Zoom Avant (Agrandir)"
         >
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <span className="text-[11px] font-mono font-bold text-indigo-500 px-1">
-          {Math.round(zoom * 100)}%
-        </span>
-        <button
-          onClick={handleZoomOut}
-          className={`p-1.5 rounded-lg transition cursor-pointer ${
-            isLight ? "hover:bg-slate-100 text-slate-700" : "hover:bg-slate-800 text-slate-300 hover:text-white"
-          }`}
-          title="Zoom Arrière (Rétrécir)"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleResetZoom}
-          className={`p-1.5 rounded-lg transition cursor-pointer ${
-            isLight ? "hover:bg-slate-100 text-slate-700" : "hover:bg-slate-800 text-slate-300 hover:text-white"
-          }`}
-          title="Taille Réelle (100%)"
-        >
-          <Maximize2 className="w-3.5 h-3.5" />
-        </button>
-
-        <div className={`h-4 w-px mx-0.5 ${isLight ? "bg-slate-300" : "bg-slate-800"}`} />
-
-        {/* Rotate & Flip */}
-        <button
-          onClick={handleRotate}
-          className={`p-1.5 rounded-lg transition cursor-pointer ${
-            isLight ? "hover:bg-slate-100 text-slate-700" : "hover:bg-slate-800 text-slate-300 hover:text-white"
-          }`}
-          title="Pivoter 90° à droite"
-        >
-          <RotateCw className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleFlipH}
-          className={`p-1.5 rounded-lg transition cursor-pointer ${
-            settings.flipH
-              ? "bg-indigo-600 text-white"
-              : isLight
-              ? "hover:bg-slate-100 text-slate-700"
-              : "hover:bg-slate-800 text-slate-300"
-          }`}
-          title="Symétrie Horizontale (Miroir)"
-        >
-          <FlipHorizontal className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleFlipV}
-          className={`p-1.5 rounded-lg transition cursor-pointer ${
-            settings.flipV
-              ? "bg-indigo-600 text-white"
-              : isLight
-              ? "hover:bg-slate-100 text-slate-700"
-              : "hover:bg-slate-800 text-slate-300"
-          }`}
-          title="Symétrie Verticale"
-        >
-          <FlipVertical className="w-4 h-4" />
-        </button>
-
-        <div className={`h-4 w-px mx-0.5 ${isLight ? "bg-slate-300" : "bg-slate-800"}`} />
-
-        {/* Crop tool toggle */}
-        {imageSrc && (
+          {/* Collapse handle */}
           <button
-            onClick={() => setIsCroppingBase(!isCroppingBase)}
-            className={`p-1.5 rounded-lg transition cursor-pointer flex items-center space-x-1 ${
-              isCroppingBase
-                ? "bg-amber-600 text-white font-bold"
+            onClick={() => setIsLateralToolbarOpen(false)}
+            className={`p-1.5 rounded-xl transition cursor-pointer ${
+              isLight
+                ? "hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                : "hover:bg-slate-800 text-slate-500 hover:text-slate-200"
+            }`}
+            title="Masquer la barre latérale pour libérer la vue"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div className={`w-5 h-px ${isLight ? "bg-slate-200" : "bg-slate-800"}`} />
+
+          {/* Zoom controls */}
+          <button
+            onClick={handleZoomIn}
+            className={`p-1.5 rounded-xl transition cursor-pointer ${
+              isLight ? "hover:bg-slate-100 text-slate-700" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+            }`}
+            title="Zoom Avant (+)"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleResetZoom}
+            className="text-[10px] font-mono font-bold text-indigo-500 py-0.5 px-1 rounded hover:bg-indigo-500/10 transition cursor-pointer"
+            title="Cliquez pour réinitialiser à 100%"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className={`p-1.5 rounded-xl transition cursor-pointer ${
+              isLight ? "hover:bg-slate-100 text-slate-700" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+            }`}
+            title="Zoom Arrière (-)"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleResetZoom}
+            className={`p-1.5 rounded-xl transition cursor-pointer ${
+              isLight ? "hover:bg-slate-100 text-slate-700" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+            }`}
+            title="Ajuster à 100%"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+
+          <div className={`w-5 h-px ${isLight ? "bg-slate-200" : "bg-slate-800"}`} />
+
+          {/* Rotate & Flip */}
+          <button
+            onClick={handleRotate}
+            className={`p-1.5 rounded-xl transition cursor-pointer ${
+              isLight ? "hover:bg-slate-100 text-slate-700" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+            }`}
+            title="Pivoter 90°"
+          >
+            <RotateCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleFlipH}
+            className={`p-1.5 rounded-xl transition cursor-pointer ${
+              settings.flipH
+                ? "bg-indigo-600 text-white shadow-sm"
                 : isLight
                 ? "hover:bg-slate-100 text-slate-700"
                 : "hover:bg-slate-800 text-slate-300"
             }`}
-            title="Outil Recadrage au curseur"
+            title="Symétrie Horizontale"
           >
-            <Crop className="w-4 h-4" />
-            <span className="text-[11px] hidden sm:inline">Recadrer</span>
+            <FlipHorizontal className="w-4 h-4" />
           </button>
-        )}
-
-        {/* Split View Compare */}
-        {imageSrc && (
           <button
-            onClick={onToggleSplitView}
-            className={`px-2 py-1.5 rounded-lg transition flex items-center space-x-1 font-semibold text-xs cursor-pointer ${
-              isSplitView
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+            onClick={handleFlipV}
+            className={`p-1.5 rounded-xl transition cursor-pointer ${
+              settings.flipV
+                ? "bg-indigo-600 text-white shadow-sm"
                 : isLight
                 ? "hover:bg-slate-100 text-slate-700"
                 : "hover:bg-slate-800 text-slate-300"
             }`}
-            title="Vue Partagée Avant / Après"
+            title="Symétrie Verticale"
           >
-            <Columns className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{isSplitView ? "Fermer Split" : "Avant / Après"}</span>
+            <FlipVertical className="w-4 h-4" />
           </button>
-        )}
 
+          <div className={`w-5 h-px ${isLight ? "bg-slate-200" : "bg-slate-800"}`} />
+
+          {/* Crop tool toggle */}
+          {imageSrc && (
+            <button
+              onClick={() => setIsCroppingBase(!isCroppingBase)}
+              className={`p-1.5 rounded-xl transition cursor-pointer ${
+                isCroppingBase
+                  ? "bg-amber-600 text-white font-bold shadow-md shadow-amber-600/30"
+                  : isLight
+                  ? "hover:bg-slate-100 text-slate-700"
+                  : "hover:bg-slate-800 text-slate-300"
+              }`}
+              title="Outil Recadrage"
+            >
+              <Crop className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Split View Compare */}
+          {imageSrc && (
+            <button
+              onClick={onToggleSplitView}
+              className={`p-1.5 rounded-xl transition cursor-pointer ${
+                isSplitView
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                  : isLight
+                  ? "hover:bg-slate-100 text-slate-700"
+                  : "hover:bg-slate-800 text-slate-300"
+              }`}
+              title={isSplitView ? "Fermer Comparaison Avant/Après" : "Vue Comparer Avant / Après"}
+            >
+              <Columns className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Histogram */}
+          {imageSrc && (
+            <button
+              onClick={() => setShowHistogram(!showHistogram)}
+              className={`p-1.5 rounded-xl transition cursor-pointer ${
+                showHistogram
+                  ? isLight
+                    ? "bg-indigo-50 text-indigo-600 font-bold border border-indigo-200"
+                    : "bg-indigo-950/60 text-indigo-400 font-bold border border-indigo-800"
+                  : isLight
+                  ? "hover:bg-slate-100 text-slate-500"
+                  : "hover:bg-slate-800 text-slate-400"
+              }`}
+              title="Afficher/Masquer l'Histogramme"
+            >
+              <Activity className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      ) : (
+        /* Collapsed Lateral Left Tab */
         <button
-          onClick={() => setShowHistogram(!showHistogram)}
-          className={`p-1.5 rounded-lg transition cursor-pointer ${
-            showHistogram
-              ? isLight
-                ? "bg-slate-100 text-indigo-600 font-bold"
-                : "bg-slate-800 text-indigo-400 font-bold"
-              : isLight
-              ? "hover:bg-slate-100 text-slate-500"
-              : "hover:bg-slate-800 text-slate-400"
+          onClick={() => setIsLateralToolbarOpen(true)}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center space-x-1 border-y border-r rounded-r-xl py-3 px-1.5 shadow-xl transition-all cursor-pointer group ${
+            isLight
+              ? "bg-white/95 border-slate-300 text-slate-700 hover:bg-amber-50 hover:border-amber-300 shadow-slate-300/40"
+              : "bg-slate-900/95 border-slate-800 text-slate-300 hover:bg-slate-850 hover:border-slate-700 shadow-black/60"
           }`}
-          title="Afficher/Masquer l'Histogramme"
+          title="Ouvrir l'onglet latéral d'outils (Zoom, Rotation, Comparer...)"
         >
-          <Activity className="w-4 h-4" />
+          <ChevronRight className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+          <div className="flex flex-col items-center">
+            <Sliders className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-500" />
+          </div>
         </button>
-      </div>
+      )}
 
       {/* Real-time Histogram Overlay */}
       {showHistogram && imageSrc && (

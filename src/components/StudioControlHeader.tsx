@@ -63,8 +63,8 @@ export const StudioControlHeader: React.FC<StudioControlHeaderProps> = ({
   const { theme } = useTheme();
   const isLight = theme === "light";
 
-  // Active Tool Set (null = folded/plié)
-  const [activeSet, setActiveSet] = useState<ToolSetKey | null>("beauty");
+  // Active Tool Set (null = folded/plié par défaut)
+  const [activeSet, setActiveSet] = useState<ToolSetKey | null>(null);
   const [layoutOrientation, setLayoutOrientation] = useState<"horizontal" | "vertical">("horizontal");
 
   const handleToggleSet = (setKey: ToolSetKey) => {
