@@ -291,5 +291,45 @@ export interface SavedSignaturePreset {
   isDefault?: boolean;
 }
 
+export type KaboStoreItemType = "signature" | "logo" | "badge" | "watermark" | "typography";
+
+export type KaboStoreCategory =
+  | "Tous"
+  | "Mariage & Cérémonie"
+  | "Studio & Portrait"
+  | "Événementiel & Soirée"
+  | "Photographe Pro"
+  | "Réseaux Sociaux"
+  | "Minimaliste"
+  | "Filigranes"
+  | "Commercial & Marque";
+
+export interface KaboStoreItem {
+  id: string;
+  title: string;
+  author: string;
+  authorId?: string;
+  category: KaboStoreCategory;
+  description?: string;
+  itemType: KaboStoreItemType;
+  preset: SavedSignaturePreset;
+  previewDataUrl?: string;
+  createdAt: number;
+  downloadsCount: number;
+  likesCount: number;
+  tags: string[];
+  isVerifiedPro?: boolean;
+}
+
+export interface AppliedStoreSignature {
+  instanceId: string;
+  storeItemId: string;
+  title: string;
+  author?: string;
+  preset: SavedSignaturePreset;
+  appliedAt: number;
+  enabled: boolean;
+}
+
 
 

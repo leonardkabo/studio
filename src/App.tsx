@@ -22,17 +22,21 @@ import { AutoFaceModal } from "./components/AutoFaceModal";
 import { BackgroundRemovalModal } from "./components/BackgroundRemovalModal";
 import { BrushSettingsModal } from "./components/BrushSettingsModal";
 import { SelectionToolbar } from "./components/SelectionToolbar";
+import { KaboStoreModal } from "./components/KaboStoreModal";
 import {
   AIAnalysisReport,
   AdjustmentSettings,
+  AppliedStoreSignature,
   BeautyOneClickFilter,
   BrushSettings,
   EventPreset,
   ExportOptions,
   HistoryItem,
+  KaboStoreItem,
   LayerItem,
   LocalCloudStorageStats,
   ProjectState,
+  SavedSignaturePreset,
   SelectionMode,
   SelectionState,
   SnapshotItem,
@@ -41,6 +45,7 @@ import {
 import { DEFAULT_SETTINGS } from "./data/presets";
 import { BEAUTY_ONE_CLICK_FILTERS } from "./data/beautyFilters";
 import { createSampleEventPhotoDataUrl, exportHighResImage } from "./utils/canvasEngine";
+import { renderMultipleSignaturesOnImage } from "./utils/compositeSignatureRenderer";
 import {
   AutoFaceParams,
   applyOneClickBeautyFilter,
@@ -176,12 +181,16 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState<boolean>(false);
   const [isBatchOpen, setIsBatchOpen] = useState<boolean>(false);
+  const [isKaboStoreOpen, setIsKaboStoreOpen] = useState<boolean>(false);
   const [isTextModalOpen, setIsTextModalOpen] = useState<boolean>(false);
   const [isOverlayModalOpen, setIsOverlayModalOpen] = useState<boolean>(false);
   const [isAutoFaceModalOpen, setIsAutoFaceModalOpen] = useState<boolean>(false);
   const [isBgModalOpen, setIsBgModalOpen] = useState<boolean>(false);
   const [isHealingBrushActive, setIsHealingBrushActive] = useState<boolean>(false);
   const [isMobileToolsOpen, setIsMobileToolsOpen] = useState<boolean>(false);
+
+  // Applied signatures from KABO Store (can apply multiple!)
+  const [appliedStoreSignatures, setAppliedStoreSignatures] = useState<AppliedStoreSignature[]>([]);
 
   // Storage and Library State
   const [allProjects, setAllProjects] = useState<ProjectState[]>([]);
@@ -621,6 +630,7 @@ export default function App() {
       handleApplyNewImage(baseImageBeforeSignature, "Signature supprimée / retirée");
       setBaseImageBeforeSignature(null);
       setHasAppliedSignature(false);
+      setAppliedStoreSignatures([]);
       setToastMessage("✓ Signature retirée de l'image");
       setTimeout(() => setToastMessage(null), 3000);
     } else if (project.historyIndex > 0) {
@@ -629,12 +639,97 @@ export default function App() {
         if (project.history[i].image) {
           handleApplyNewImage(project.history[i].image!, "Signature supprimée / retirée");
           setHasAppliedSignature(false);
+          setAppliedStoreSignatures([]);
           setToastMessage("✓ Signature retirée de l'image");
           setTimeout(() => setToastMessage(null), 3000);
           break;
         }
       }
     }
+  };
+
+  // KABO Store Signature Multi-Application Engine
+  const handleApplyStoreSignatureToImage = async (
+    preset: SavedSignaturePreset,
+    storeItem: KaboStoreItem
+  ) => {
+    if (!project.originalImage) return;
+
+    // Preserve the clean base image before any signature is applied
+    const cleanBase = baseImageBeforeSignature || project.originalImage;
+    if (!baseImageBeforeSignature) {
+      setBaseImageBeforeSignature(cleanBase);
+    }
+
+    const newInstance: AppliedStoreSignature = {
+      instanceId: `app_sig_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      storeItemId: storeItem.id,
+      title: storeItem.title,
+      author: storeItem.author,
+      preset: JSON.parse(JSON.stringify(preset)),
+      appliedAt: Date.now(),
+      enabled: true,
+    };
+
+    const updatedList = [...appliedStoreSignatures, newInstance];
+    setAppliedStoreSignatures(updatedList);
+
+    try {
+      // Sequentially render all active signature layers onto cleanBase
+      const compositeDataUrl = await renderMultipleSignaturesOnImage(
+        cleanBase,
+        updatedList.filter((s) => s.enabled).map((s) => s.preset)
+      );
+
+      handleApplyNewImage(
+        compositeDataUrl,
+        `Signature KABO Store (${updatedList.length}) : ${storeItem.title}`
+      );
+      setHasAppliedSignature(true);
+      setToastMessage(`✓ Signature KABO Store ajoutée : ${storeItem.title}`);
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err) {
+      console.error("Erreur lors de l'application de la signature du store:", err);
+    }
+  };
+
+  // Remove a single specific KABO Store signature
+  const handleRemoveAppliedStoreSignature = async (instanceId: string) => {
+    const updatedList = appliedStoreSignatures.filter((s) => s.instanceId !== instanceId);
+    setAppliedStoreSignatures(updatedList);
+
+    const cleanBase = baseImageBeforeSignature || project.originalImage;
+    if (updatedList.length === 0) {
+      if (baseImageBeforeSignature) {
+        handleApplyNewImage(baseImageBeforeSignature, "Signature KABO Store retirée");
+        setBaseImageBeforeSignature(null);
+        setHasAppliedSignature(false);
+      }
+    } else {
+      try {
+        const compositeDataUrl = await renderMultipleSignaturesOnImage(
+          cleanBase,
+          updatedList.filter((s) => s.enabled).map((s) => s.preset)
+        );
+        handleApplyNewImage(compositeDataUrl, "Signature KABO Store retirée");
+      } catch (err) {
+        console.error("Erreur mise à jour après suppression de signature:", err);
+      }
+    }
+    setToastMessage("✓ Signature retirée de l'image");
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Clear all applied KABO Store signatures
+  const handleClearAllAppliedStoreSignatures = () => {
+    setAppliedStoreSignatures([]);
+    if (baseImageBeforeSignature) {
+      handleApplyNewImage(baseImageBeforeSignature, "Toutes les signatures KABO Store retirées");
+      setBaseImageBeforeSignature(null);
+      setHasAppliedSignature(false);
+    }
+    setToastMessage("✓ Toutes les signatures KABO Store retirées");
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   // 1-Click Event Preset Application
@@ -1082,6 +1177,7 @@ export default function App() {
         onExportClick={() => setIsExportOpen(true)}
         onOpenProjects={() => setIsProjectsOpen(true)}
         onOpenBatch={() => setIsBatchOpen(true)}
+        onOpenKaboStore={() => setIsKaboStoreOpen(true)}
         onUploadImage={handleUploadImageFile}
         onAutoFixClick={handleTriggerAiAnalysis}
         isAiAnalyzing={isAiAnalyzing}
@@ -1121,6 +1217,7 @@ export default function App() {
           onOpenTextModal={() => setIsTextModalOpen(true)}
           onOpenOverlayModal={() => setIsOverlayModalOpen(true)}
           onOpenBgModal={() => setIsBgModalOpen(true)}
+          onOpenKaboStore={() => setIsKaboStoreOpen(true)}
           onAutoCleanBlemishes={handleAutoCleanBlemishes}
           onQuickSkinSmooth={handleQuickSkinSmooth}
           onOpenAutoFaceModal={() => setIsAutoFaceModalOpen(true)}
@@ -1153,31 +1250,82 @@ export default function App() {
         {/* Floating Quick Action Pill for Active Signature (Easy Edit / Remove before export) */}
         {hasAppliedSignature && project.originalImage && (
           <div
-            className={`absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center space-x-2 px-3.5 py-1.5 rounded-2xl shadow-2xl border backdrop-blur-md animate-fade-in transition-all ${
+            className={`absolute top-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap items-center justify-center gap-2 px-3.5 py-1.5 rounded-2xl shadow-2xl border backdrop-blur-md animate-fade-in transition-all max-w-[95vw] ${
               isLight
-                ? "bg-white/95 border-violet-300 text-slate-900 shadow-violet-500/15"
-                : "bg-slate-900/95 border-violet-500/50 text-slate-100 shadow-violet-950/50"
+                ? "bg-white/95 border-amber-300 text-slate-900 shadow-amber-500/15"
+                : "bg-slate-900/95 border-amber-500/50 text-slate-100 shadow-amber-950/50"
             }`}
           >
-            <div className="flex items-center space-x-1.5 text-xs font-bold text-violet-500">
-              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span>Signature Active</span>
-            </div>
-            <div className="h-3.5 w-px bg-slate-300 dark:bg-slate-700 mx-1" />
-            <button
-              onClick={() => setIsTextModalOpen(true)}
-              className="px-2.5 py-1 rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white flex items-center space-x-1 transition cursor-pointer shadow-xs"
-              title="Modifier la signature (changer icônes, ordre, position, texte, marge...)"
-            >
-              <span>✏️ Modifier</span>
-            </button>
-            <button
-              onClick={handleRemoveSignature}
-              className="px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 flex items-center space-x-1 transition cursor-pointer"
-              title="Supprimer la signature et restaurer la photo originale propre"
-            >
-              <span>🗑️ Supprimer</span>
-            </button>
+            {appliedStoreSignatures.length > 0 ? (
+              <>
+                <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-500">
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                  <span>KABO Store ({appliedStoreSignatures.length})</span>
+                </div>
+                <div className="h-3.5 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block" />
+
+                {/* Individual signatures chips with 1-click delete */}
+                <div className="flex flex-wrap items-center gap-1.5 max-h-16 overflow-y-auto no-scrollbar">
+                  {appliedStoreSignatures.map((sig) => (
+                    <div
+                      key={sig.instanceId}
+                      className={`flex items-center space-x-1 px-2 py-0.5 rounded-lg border text-[11px] font-semibold ${
+                        isLight
+                          ? "bg-amber-50 border-amber-200 text-amber-900"
+                          : "bg-amber-950/50 border-amber-800 text-amber-200"
+                      }`}
+                    >
+                      <span className="truncate max-w-[120px]">{sig.title}</span>
+                      <button
+                        onClick={() => handleRemoveAppliedStoreSignature(sig.instanceId)}
+                        className="text-slate-400 hover:text-rose-500 transition cursor-pointer p-0.5"
+                        title={`Supprimer ${sig.title}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="h-3.5 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block" />
+                <button
+                  onClick={() => setIsKaboStoreOpen(true)}
+                  className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center space-x-1 transition cursor-pointer shadow-xs"
+                  title="Ajouter d'autres signatures ou logos depuis le KABO Store"
+                >
+                  <span>+ KABO Store</span>
+                </button>
+                <button
+                  onClick={handleClearAllAppliedStoreSignatures}
+                  className="px-2 py-1 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 flex items-center space-x-1 transition cursor-pointer"
+                  title="Tout retirer et restaurer l'image propre"
+                >
+                  <span>Tout retirer</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center space-x-1.5 text-xs font-bold text-violet-500">
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                  <span>Signature Active</span>
+                </div>
+                <div className="h-3.5 w-px bg-slate-300 dark:bg-slate-700 mx-1" />
+                <button
+                  onClick={() => setIsTextModalOpen(true)}
+                  className="px-2.5 py-1 rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white flex items-center space-x-1 transition cursor-pointer shadow-xs"
+                  title="Modifier la signature (changer icônes, ordre, position, texte, marge...)"
+                >
+                  <span>✏️ Modifier</span>
+                </button>
+                <button
+                  onClick={handleRemoveSignature}
+                  className="px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 flex items-center space-x-1 transition cursor-pointer"
+                  title="Supprimer la signature et restaurer la photo originale propre"
+                >
+                  <span>🗑️ Supprimer</span>
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -1405,6 +1553,10 @@ export default function App() {
       <BatchProcessingModal
         isOpen={isBatchOpen}
         onClose={() => setIsBatchOpen(false)}
+        onOpenKaboStore={() => {
+          setIsBatchOpen(false);
+          setIsKaboStoreOpen(true);
+        }}
       />
 
       {/* Text & Signature Studio Modal */}
@@ -1416,6 +1568,26 @@ export default function App() {
         hasAppliedSignature={hasAppliedSignature}
         onRemoveSignature={handleRemoveSignature}
         onApplyNewImage={handleApplyNewImage}
+        onOpenKaboStore={() => {
+          setIsTextModalOpen(false);
+          setIsKaboStoreOpen(true);
+        }}
+      />
+
+      {/* KABO Store Shared Community Library Modal */}
+      <KaboStoreModal
+        isOpen={isKaboStoreOpen}
+        onClose={() => setIsKaboStoreOpen(false)}
+        onApplyStoreSignatureToImage={handleApplyStoreSignatureToImage}
+        onRemoveAppliedStoreSignature={handleRemoveAppliedStoreSignature}
+        onClearAllAppliedStoreSignatures={handleClearAllAppliedStoreSignatures}
+        appliedStoreSignatures={appliedStoreSignatures}
+        hasActiveImage={!!project.originalImage}
+        activeImageSrc={project.originalImage}
+        onOpenSignatureEditor={() => {
+          setIsKaboStoreOpen(false);
+          setIsTextModalOpen(true);
+        }}
       />
 
       {/* Secondary Image Overlay & Crop Modal */}

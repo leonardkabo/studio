@@ -21,6 +21,7 @@ interface StudioControlHeaderProps {
   onOpenTextModal: () => void;
   onOpenOverlayModal: () => void;
   onOpenBgModal: () => void;
+  onOpenKaboStore?: () => void;
   onAutoCleanBlemishes: () => void;
   onQuickSkinSmooth: () => void;
   onOpenAutoFaceModal?: () => void;
@@ -48,6 +49,7 @@ export const StudioControlHeader: React.FC<StudioControlHeaderProps> = ({
   onOpenTextModal,
   onOpenOverlayModal,
   onOpenBgModal,
+  onOpenKaboStore,
   onAutoCleanBlemishes,
   onQuickSkinSmooth,
   onOpenAutoFaceModal,
@@ -63,8 +65,8 @@ export const StudioControlHeader: React.FC<StudioControlHeaderProps> = ({
   const { theme } = useTheme();
   const isLight = theme === "light";
 
-  // Active Tool Set (null = folded/plié)
-  const [activeSet, setActiveSet] = useState<ToolSetKey | null>("beauty");
+  // Active Tool Set (null = folded/plié par défaut)
+  const [activeSet, setActiveSet] = useState<ToolSetKey | null>(null);
   const [layoutOrientation, setLayoutOrientation] = useState<"horizontal" | "vertical">("horizontal");
 
   const handleToggleSet = (setKey: ToolSetKey) => {
@@ -411,6 +413,20 @@ export const StudioControlHeader: React.FC<StudioControlHeaderProps> = ({
               >
                 Signature & Texte
               </button>
+
+              {onOpenKaboStore && (
+                <button
+                  onClick={onOpenKaboStore}
+                  className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition cursor-pointer text-center flex items-center justify-center space-x-1.5 ${
+                    isLight
+                      ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border-amber-300"
+                      : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/30"
+                  }`}
+                  title="Ouvrir la bibliothèque partagée KABO Store (Signatures & Logos)"
+                >
+                  <span>✨ KABO Store</span>
+                </button>
+              )}
             </div>
           )}
 

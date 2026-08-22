@@ -3,6 +3,14 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import {
+  loadStoreItems,
+  getStoreItemById,
+  addStoreItem,
+  deleteStoreItem,
+  incrementStoreItemLike,
+  incrementStoreItemDownload,
+} from "./server/kaboStoreService";
 
 dotenv.config();
 
@@ -243,6 +251,137 @@ Explique aussi brièvement en français la modication apportée.`;
   } catch (error: any) {
     console.error("Erreur Custom Retouch:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// KABO STORE API ENDPOINTS (Partage & Bibliothèque de Signatures)
+// ==========================================
+
+// GET all KABO Store items with filtering & sorting
+app.get("/api/kabo-store/items", (req, res) => {
+  try {
+    let items = loadStoreItems();
+    const { category, search, type, sort } = req.query as {
+      category?: string;
+      search?: string;
+      type?: string;
+      sort?: string;
+    };
+
+    if (category && category !== "Tous") {
+      items = items.filter((i) => i.category.toLowerCase() === category.toLowerCase());
+    }
+
+    if (type && type !== "all") {
+      items = items.filter((i) => i.itemType === type);
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      items = items.filter(
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          i.author.toLowerCase().includes(q) ||
+          (i.description && i.description.toLowerCase().includes(q)) ||
+          i.preset.text.toLowerCase().includes(q) ||
+          i.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+
+    // Sort order
+    if (sort === "popular") {
+      items.sort((a, b) => (b.downloadsCount + b.likesCount * 2) - (a.downloadsCount + a.likesCount * 2));
+    } else if (sort === "likes") {
+      items.sort((a, b) => b.likesCount - a.likesCount);
+    } else if (sort === "name") {
+      items.sort((a, b) => a.title.localeCompare(b.title));
+    } else {
+      // newest default
+      items.sort((a, b) => b.createdAt - a.createdAt);
+    }
+
+    res.json({ success: true, count: items.length, items });
+  } catch (error: any) {
+    console.error("Error fetching KABO Store items:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET single item
+app.get("/api/kabo-store/items/:id", (req, res) => {
+  try {
+    const item = getStoreItemById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ success: false, error: "Modèle de signature introuvable dans KABO Store" });
+    }
+    res.json({ success: true, item });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST upload new item to KABO Store
+app.post("/api/kabo-store/items", (req, res) => {
+  try {
+    const { title, author, authorId, category, description, itemType, preset, previewDataUrl, tags } = req.body;
+
+    if (!title || !preset) {
+      return res.status(400).json({ success: false, error: "Le titre et la configuration de la signature sont obligatoires" });
+    }
+
+    const created = addStoreItem({
+      title: title.trim(),
+      author: (author || "Photographe").trim(),
+      authorId: authorId || undefined,
+      category: category || "Studio & Portrait",
+      description: description ? description.trim() : undefined,
+      itemType: itemType || "signature",
+      preset,
+      previewDataUrl,
+      tags: Array.isArray(tags) ? tags : ["Signature", "KABO Store"],
+      isVerifiedPro: false,
+    });
+
+    res.status(201).json({ success: true, item: created });
+  } catch (error: any) {
+    console.error("Error publishing to KABO Store:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE item from KABO Store
+app.delete("/api/kabo-store/items/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = deleteStoreItem(id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: "Élément introuvable ou déjà supprimé" });
+    }
+    res.json({ success: true, message: "Signature supprimée définitivement du serveur et de KABO Store" });
+  } catch (error: any) {
+    console.error("Error deleting from KABO Store:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST like
+app.post("/api/kabo-store/items/:id/like", (req, res) => {
+  try {
+    const result = incrementStoreItemLike(req.params.id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST download
+app.post("/api/kabo-store/items/:id/download", (req, res) => {
+  try {
+    const result = incrementStoreItemDownload(req.params.id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

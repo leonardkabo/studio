@@ -14,10 +14,11 @@ import {
   Wand2,
   Sun,
   Moon,
+  Store,
 } from "lucide-react";
 import { LocalCloudStorageStats } from "../types";
 import { useTheme } from "../context/ThemeContext";
-import defaultAppLogo from "../../logo.png";
+import defaultAppLogo from "../assets/images/amour_et_vie_30_ans_logo_1787222546850.jpg";
 
 export interface HeaderProps {
   projectTitle?: string;
@@ -36,6 +37,7 @@ export interface HeaderProps {
   onOpenExport?: () => void;
   onOpenProjects?: () => void;
   onOpenBatch?: () => void;
+  onOpenKaboStore?: () => void;
   storageStats?: LocalCloudStorageStats;
   isCloudSyncEnabled?: boolean;
   onToggleCloudSync?: () => void;
@@ -59,6 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExport,
   onOpenProjects,
   onOpenBatch,
+  onOpenKaboStore,
   storageStats,
   isCloudSyncEnabled = false,
   onToggleCloudSync,
@@ -298,6 +301,23 @@ export const Header: React.FC<HeaderProps> = ({
           <Layers className="w-4 h-4 text-amber-500" />
           <span className="hidden lg:inline font-medium">Traitement Lot</span>
         </button>
+
+        {/* KABO Store Shared Library */}
+        {onOpenKaboStore && (
+          <button
+            id="btn-open-kabo-store"
+            onClick={onOpenKaboStore}
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+              isLight
+                ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 border-amber-300 shadow-xs"
+                : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/30 shadow-xs"
+            }`}
+            title="KABO Store - Bibliothèque partagée de signatures, logos et polices"
+          >
+            <Store className="w-4 h-4 text-amber-500" />
+            <span>KABO Store</span>
+          </button>
+        )}
 
         {/* Projects Library */}
         <button
