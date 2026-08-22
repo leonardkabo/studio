@@ -216,5 +216,80 @@ export interface WorkspaceTab {
   activeLayerId: string | null;
 }
 
+export interface SignatureIconItem {
+  id: string;
+  name: string;
+  key: string;
+  type: "builtin" | "custom";
+  size: number;
+  scaleMultiplier?: number;
+  enabled: boolean;
+  customDataUrl?: string;
+  svgPath?: string;
+  viewBox?: string;
+}
+
+export type AnchorPosition =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "middle-left"
+  | "center"
+  | "middle-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
+
+export type SignatureOrientation =
+  | "horizontal"
+  | "vertical-ccw"
+  | "vertical-cw"
+  | "vertical-stack";
+
+export type IconStyleMode =
+  | "badge-dark"
+  | "badge-light"
+  | "monochrome"
+  | "badge-gold"
+  | "official";
+
+export interface SavedSignaturePreset {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  mode: "signature" | "textOnImage" | "imageInText";
+  iconsList: SignatureIconItem[];
+  globalIconSize: number;
+  globalIconScale: number;
+  syncAllIconSizes: boolean;
+  iconStyle: IconStyleMode;
+  iconSpacing: number;
+  iconTextSpacing: number;
+  iconPositionOrder: "icons-first" | "text-first";
+  text: string;
+  fontFamily: string;
+  fontSizePx: number;
+  fontWeight: "normal" | "600" | "bold" | "800";
+  textColor: string;
+  opacity: number;
+  orientation: SignatureOrientation;
+  anchorPosition: AnchorPosition;
+  customMarginUnit: "px" | "%";
+  customMarginLinked: boolean;
+  customMarginX: number;
+  customMarginY: number;
+  fineRotation: number;
+  hasOutline: boolean;
+  outlineColor: string;
+  outlineWidth: number;
+  hasShadow: boolean;
+  shadowColor: string;
+  hasBadgeBox: boolean;
+  badgeBoxColor: string;
+  badgeBoxPadding: number;
+  isDefault?: boolean;
+}
+
 
 

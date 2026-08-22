@@ -122,7 +122,23 @@ export const RightSidebarPanel: React.FC<RightSidebarPanelProps> = ({
   const [customPrompt, setCustomPrompt] = useState<string>("");
   const [snapshotName, setSnapshotName] = useState<string>("");
   const [showBeautySliders, setShowBeautySliders] = useState<boolean>(true);
-  const [isSidebarDocked, setIsSidebarDocked] = useState<boolean>(false);
+  const [isSidebarDocked, setIsSidebarDocked] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("studio_sidebar_docked");
+      return saved !== null ? saved === "true" : true; // Plié par défaut (true)
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleSidebarDocked = (docked: boolean) => {
+    setIsSidebarDocked(docked);
+    try {
+      localStorage.setItem("studio_sidebar_docked", String(docked));
+    } catch {
+      // ignore
+    }
+  };
   const [isWideMode, setIsWideMode] = useState<boolean>(false);
   const [toolLayoutMode, setToolLayoutMode] = useState<"vertical" | "grid">("vertical");
   const [activeSubToolFilter, setActiveSubToolFilter] = useState<string>("all");
@@ -235,107 +251,107 @@ export const RightSidebarPanel: React.FC<RightSidebarPanelProps> = ({
   if (isSidebarDocked) {
     return (
       <div
-        className={`border-l flex flex-col items-center py-4 px-2 space-y-4 z-20 shadow-xl transition-colors ${
+        className={`border-l flex flex-col items-center py-4 px-2 space-y-4 z-20 shadow-xl transition-all select-none w-14 shrink-0 ${
           isLight
-            ? "bg-white border-slate-200 text-slate-700"
-            : "bg-slate-900 border-slate-800 text-slate-300"
+            ? "bg-white/95 border-slate-200 text-slate-700 backdrop-blur-xs"
+            : "bg-slate-900/95 border-slate-800 text-slate-300 backdrop-blur-xs"
         }`}
       >
         <button
-          onClick={() => setIsSidebarDocked(false)}
-          className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition cursor-pointer"
-          title="Déplier le panneau de retouche (Photoshop Studio)"
+          onClick={() => handleToggleSidebarDocked(false)}
+          className="w-9 h-9 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/35 transition-all transform hover:scale-105 flex items-center justify-center cursor-pointer"
+          title="Déplier le panneau latéral de retouche"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
 
-        <div className="flex-1 flex flex-col items-center space-y-3 pt-4 text-xs font-semibold">
+        <div className="flex-1 flex flex-col items-center space-y-4 pt-3 text-[11px] font-semibold">
           <button
             onClick={() => {
-              setIsSidebarDocked(false);
+              handleToggleSidebarDocked(false);
               focusOnlyPanel("layers");
             }}
-            className={`p-2 rounded-lg transition cursor-pointer ${
+            className={`px-1.5 py-1 rounded-lg transition cursor-pointer text-center ${
               isLight
-                ? "hover:bg-slate-100 text-slate-600 hover:text-indigo-600"
-                : "hover:bg-slate-800 text-slate-400 hover:text-indigo-400"
+                ? "hover:bg-indigo-50 text-slate-600 hover:text-indigo-600"
+                : "hover:bg-indigo-950/50 text-slate-400 hover:text-indigo-400"
             }`}
-            title="Calques"
+            title="Calques & Superpositions"
           >
             Calques
           </button>
 
           <button
             onClick={() => {
-              setIsSidebarDocked(false);
+              handleToggleSidebarDocked(false);
               focusOnlyPanel("beauty");
             }}
-            className={`p-2 rounded-lg transition cursor-pointer ${
+            className={`px-1.5 py-1 rounded-lg transition cursor-pointer text-center ${
               isLight
-                ? "hover:bg-slate-100 text-slate-600 hover:text-pink-600"
-                : "hover:bg-slate-800 text-slate-400 hover:text-pink-400"
+                ? "hover:bg-pink-50 text-slate-600 hover:text-pink-600"
+                : "hover:bg-pink-950/50 text-slate-400 hover:text-pink-400"
             }`}
-            title="Beauté"
+            title="Beauté & Visage"
           >
             Beauté
           </button>
 
           <button
             onClick={() => {
-              setIsSidebarDocked(false);
+              handleToggleSidebarDocked(false);
               focusOnlyPanel("light");
             }}
-            className={`p-2 rounded-lg transition cursor-pointer ${
+            className={`px-1.5 py-1 rounded-lg transition cursor-pointer text-center ${
               isLight
-                ? "hover:bg-slate-100 text-slate-600 hover:text-amber-600"
-                : "hover:bg-slate-800 text-slate-400 hover:text-amber-400"
+                ? "hover:bg-amber-50 text-slate-600 hover:text-amber-600"
+                : "hover:bg-amber-950/50 text-slate-400 hover:text-amber-400"
             }`}
-            title="Lumière"
+            title="Lumière & Tonalité"
           >
             Lumière
           </button>
 
           <button
             onClick={() => {
-              setIsSidebarDocked(false);
+              handleToggleSidebarDocked(false);
               focusOnlyPanel("hsl");
             }}
-            className={`p-2 rounded-lg transition cursor-pointer ${
+            className={`px-1.5 py-1 rounded-lg transition cursor-pointer text-center ${
               isLight
-                ? "hover:bg-slate-100 text-slate-600 hover:text-cyan-600"
-                : "hover:bg-slate-800 text-slate-400 hover:text-cyan-400"
+                ? "hover:bg-cyan-50 text-slate-600 hover:text-cyan-600"
+                : "hover:bg-cyan-950/50 text-slate-400 hover:text-cyan-400"
             }`}
-            title="Couleurs"
+            title="Couleurs & HSL"
           >
             HSL
           </button>
 
           <button
             onClick={() => {
-              setIsSidebarDocked(false);
+              handleToggleSidebarDocked(false);
               focusOnlyPanel("ai");
             }}
-            className={`p-2 rounded-lg transition cursor-pointer ${
+            className={`px-1.5 py-1 rounded-lg transition cursor-pointer text-center ${
               isLight
-                ? "hover:bg-slate-100 text-slate-600 hover:text-indigo-600"
-                : "hover:bg-slate-800 text-slate-400 hover:text-indigo-400"
+                ? "hover:bg-indigo-50 text-slate-600 hover:text-indigo-600"
+                : "hover:bg-indigo-950/50 text-slate-400 hover:text-indigo-400"
             }`}
-            title="IA"
+            title="Assistant IA Gemini"
           >
             IA
           </button>
 
           <button
             onClick={() => {
-              setIsSidebarDocked(false);
+              handleToggleSidebarDocked(false);
               focusOnlyPanel("history");
             }}
-            className={`p-2 rounded-lg transition cursor-pointer ${
+            className={`px-1.5 py-1 rounded-lg transition cursor-pointer text-center ${
               isLight
-                ? "hover:bg-slate-100 text-slate-600 hover:text-emerald-600"
-                : "hover:bg-slate-800 text-slate-400 hover:text-emerald-400"
+                ? "hover:bg-emerald-50 text-slate-600 hover:text-emerald-600"
+                : "hover:bg-emerald-950/50 text-slate-400 hover:text-emerald-400"
             }`}
-            title="Historique"
+            title="Historique & Instantanés"
           >
             Hist.
           </button>
@@ -460,7 +476,7 @@ export const RightSidebarPanel: React.FC<RightSidebarPanelProps> = ({
           ) : null}
 
           <button
-            onClick={() => setIsSidebarDocked(true)}
+            onClick={() => handleToggleSidebarDocked(true)}
             className={`hidden md:inline-flex p-1 rounded-lg transition cursor-pointer ${
               isLight
                 ? "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
