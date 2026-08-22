@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   X,
   Store,
@@ -18,6 +18,11 @@ import {
   Image as ImageIcon,
   Sun,
   Moon,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  RotateCcw,
+  Move,
 } from "lucide-react";
 import {
   KaboStoreItem,
@@ -103,6 +108,14 @@ export const KaboStoreModal: React.FC<KaboStoreModalProps> = ({
   const [previewLiveUrl, setPreviewLiveUrl] = useState<string>("");
   const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
 
+  // Zoom & Pan State for HD Proportion Viewer
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [imgNaturalSize, setImgNaturalSize] = useState<{ w: number; h: number } | null>(null);
+  const stageContainerRef = useRef<HTMLDivElement>(null);
+
   // Publish Dialog State
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState<boolean>(false);
   const [publishTitle, setPublishTitle] = useState<string>("");
@@ -165,15 +178,20 @@ export const KaboStoreModal: React.FC<KaboStoreModalProps> = ({
   useEffect(() => {
     if (!previewItem) {
       setPreviewLiveUrl("");
+      setZoomLevel(1.0);
+      setPanOffset({ x: 0, y: 0 });
       return;
     }
 
     let isMounted = true;
     setIsPreviewLoading(true);
+    // Reset zoom & pan when opening/switching preview
+    setZoomLevel(1.0);
+    setPanOffset({ x: 0, y: 0 });
 
     const mode = !isPhotoAvailable && previewMode === "photo" ? "dark" : previewMode;
 
-    generatePresetLivePreview(previewItem.preset, mode, activeImageSrc, 1280, 720)
+    generatePresetLivePreview(previewItem.preset, mode, activeImageSrc, 1920)
       .then((url) => {
         if (isMounted) {
           setPreviewLiveUrl(url);
@@ -196,6 +214,89 @@ export const KaboStoreModal: React.FC<KaboStoreModalProps> = ({
   const handleOpenPreview = (item: KaboStoreItem) => {
     setPreviewItem(item);
     setPreviewMode(isPhotoAvailable ? "photo" : "dark");
+    setZoomLevel(1.0);
+    setPanOffset({ x: 0, y: 0 });
+  };
+
+  // Zoom & Pan Handlers for the Preview Stage
+  const handleToggleZoom = (e: React.MouseEvent) => {
+    if (zoomLevel <= 1.05) {
+      setZoomLevel(2.5);
+    } else {
+      setZoomLevel(1.0);
+      setPanOffset({ x: 0, y: 0 });
+    }
+  };
+
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(4.0, +(prev + 0.5).toFixed(1)));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => {
+      const next = Math.max(1.0, +(prev - 0.5).toFixed(1));
+      if (next === 1.0) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleResetZoom = () => {
+    setZoomLevel(1.0);
+    setPanOffset({ x: 0, y: 0 });
+  };
+
+  // Drag to pan when zoomed in
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel <= 1.0) return;
+    setIsDragging(true);
+    setDragStartPos({
+      x: e.clientX - panOffset.x,
+      y: e.clientY - panOffset.y,
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || zoomLevel <= 1.0) return;
+    setPanOffset({
+      x: e.clientX - dragStartPos.x,
+      y: e.clientY - dragStartPos.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (zoomLevel <= 1.0 || e.touches.length !== 1) return;
+    setIsDragging(true);
+    setDragStartPos({
+      x: e.touches[0].clientX - panOffset.x,
+      y: e.touches[0].clientY - panOffset.y,
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || zoomLevel <= 1.0 || e.touches.length !== 1) return;
+    setPanOffset({
+      x: e.touches[0].clientX - dragStartPos.x,
+      y: e.touches[0].clientY - dragStartPos.y,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    // Only zoom when preview is active
+    if (!previewLiveUrl) return;
+    const delta = e.deltaY < 0 ? 0.25 : -0.25;
+    setZoomLevel((prev) => {
+      const next = Math.min(4.0, Math.max(1.0, +(prev + delta).toFixed(2)));
+      if (next === 1.0) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
   };
 
   // Update Publish Preview when selected preset changes
@@ -884,19 +985,114 @@ export const KaboStoreModal: React.FC<KaboStoreModalProps> = ({
               </div>
 
               {/* Preview Main Stage */}
-              <div className="flex-1 overflow-hidden p-4 sm:p-6 flex items-center justify-center bg-slate-950/90 relative min-h-[300px]">
+              <div
+                ref={stageContainerRef}
+                onDoubleClick={handleToggleZoom}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onWheel={handleWheel}
+                className={`flex-1 relative overflow-hidden p-2 sm:p-4 flex items-center justify-center bg-slate-950/95 min-h-[320px] sm:min-h-[420px] max-h-[64vh] select-none ${
+                  zoomLevel > 1.05 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-zoom-in"
+                }`}
+              >
                 {isPreviewLoading ? (
                   <div className="flex flex-col items-center justify-center space-y-3">
                     <RefreshCw className="w-8 h-8 text-amber-500 animate-spin" />
                     <p className="text-xs font-bold text-slate-400">Génération de la prévisualisation HD...</p>
                   </div>
                 ) : previewLiveUrl ? (
-                  <div className="w-full h-full max-h-[55vh] flex items-center justify-center overflow-hidden rounded-2xl border border-slate-800 shadow-2xl">
+                  <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
                     <img
                       src={previewLiveUrl}
                       alt={previewItem.title}
-                      className="max-w-full max-h-full object-contain rounded-xl"
+                      draggable={false}
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        setImgNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+                      }}
+                      style={{
+                        transform: `scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+                        transformOrigin: "center center",
+                        transition: isDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                        maxWidth: "100%",
+                        maxHeight: "100%",
+                      }}
+                      className="object-contain rounded-xl shadow-2xl pointer-events-auto select-none max-w-full max-h-full border border-slate-800/80"
                     />
+
+                    {/* Floating Zoom & Proportions Toolbar */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-2xl text-slate-200">
+                      {/* Zoom Out Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleZoomOut();
+                        }}
+                        disabled={zoomLevel <= 1.0}
+                        className="p-1.5 rounded-xl hover:bg-slate-800 active:bg-slate-700 disabled:opacity-30 text-slate-300 hover:text-white transition cursor-pointer"
+                        title="Dézoomer (-)"
+                      >
+                        <ZoomOut className="w-4 h-4" />
+                      </button>
+
+                      {/* Zoom % Indicator (clickable to reset or toggle 2x) */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleZoom(e as any);
+                        }}
+                        className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-slate-800/90 text-amber-400 hover:text-amber-300 border border-slate-700 transition cursor-pointer min-w-[54px] text-center"
+                        title="Cliquer pour basculer le zoom"
+                      >
+                        {Math.round(zoomLevel * 100)}%
+                      </button>
+
+                      {/* Zoom In Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleZoomIn();
+                        }}
+                        disabled={zoomLevel >= 4.0}
+                        className="p-1.5 rounded-xl hover:bg-slate-800 active:bg-slate-700 disabled:opacity-30 text-slate-300 hover:text-white transition cursor-pointer"
+                        title="Zoomer (+)"
+                      >
+                        <ZoomIn className="w-4 h-4" />
+                      </button>
+
+                      <div className="w-[1px] h-4 bg-slate-700 mx-1" />
+
+                      {/* Reset Fit Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleResetZoom();
+                        }}
+                        className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer"
+                        title="Ajuster à l'écran (100%)"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Helpful Hint Badge */}
+                      <span className="hidden sm:inline-flex items-center text-[10px] text-slate-400 font-medium pl-1">
+                        Double-clic pour zoomer
+                      </span>
+                    </div>
+
+                    {/* Top Right Proportions / Dimensions Pill */}
+                    {imgNaturalSize && (
+                      <div className="absolute top-3 right-3 z-20 pointer-events-none px-2.5 py-1 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-[10px] font-mono text-slate-300 flex items-center space-x-1.5 shadow-lg">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span>{imgNaturalSize.w} × {imgNaturalSize.h} px</span>
+                        <span className="text-amber-400 font-sans font-bold">100% Proportionnel</span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center text-slate-400">

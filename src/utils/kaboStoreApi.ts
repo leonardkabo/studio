@@ -164,14 +164,14 @@ export async function generatePresetThumbnail(
 
 /**
  * Generate a full-size, high-definition live preview for the modal
- * Can render on top of the user's actual photo or on studio backgrounds
+ * Preserves the exact aspect ratio of the user's photo so signatures
+ * appear in their true proportional positions across all screen types.
  */
 export async function generatePresetLivePreview(
   preset: SavedSignaturePreset,
   mode: "photo" | "dark" | "light" | "checker",
   photoSrc?: string | null,
-  maxWidth: number = 1200,
-  maxHeight: number = 700
+  targetMaxDim: number = 1920
 ): Promise<string> {
   const canvas = document.createElement("canvas");
 
@@ -180,21 +180,21 @@ export async function generatePresetLivePreview(
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = async () => {
-        // Calculate proportional scale to avoid excessive canvas sizes
-        let w = img.naturalWidth || img.width || maxWidth;
-        let h = img.naturalHeight || img.height || maxHeight;
-        
-        if (w > maxWidth || h > maxHeight) {
-          const ratio = Math.min(maxWidth / w, maxHeight / h);
+        let w = img.naturalWidth || img.width || 1600;
+        let h = img.naturalHeight || img.height || 1000;
+
+        // Proportional constraint to prevent excessive memory usage while maintaining crisp HD
+        if (w > targetMaxDim || h > targetMaxDim) {
+          const ratio = targetMaxDim / Math.max(w, h);
           w = Math.round(w * ratio);
           h = Math.round(h * ratio);
         }
 
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width = Math.max(200, w);
+        canvas.height = Math.max(200, h);
         const ctx = canvas.getContext("2d");
         if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           await renderSignaturePresetOnCanvas(canvas, preset);
           resolve(canvas.toDataURL("image/png"));
         } else {
@@ -202,13 +202,12 @@ export async function generatePresetLivePreview(
         }
       };
       img.onerror = async () => {
-        // Fallback to dark studio
-        canvas.width = maxWidth;
-        canvas.height = maxHeight;
+        canvas.width = 1600;
+        canvas.height = 900;
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.fillStyle = "#0f172a";
-          ctx.fillRect(0, 0, maxWidth, maxHeight);
+          ctx.fillRect(0, 0, 1600, 900);
           await renderSignaturePresetOnCanvas(canvas, preset);
           resolve(canvas.toDataURL("image/png"));
         } else {
@@ -219,30 +218,74 @@ export async function generatePresetLivePreview(
     });
   }
 
-  canvas.width = maxWidth;
-  canvas.height = maxHeight;
+  // If rendering on dark / light / checker, check if photoSrc exists to adopt its natural aspect ratio
+  let targetWidth = 1600;
+  let targetHeight = 900;
+
+  if (photoSrc) {
+    try {
+      const photoDimensions = await new Promise<{ w: number; h: number }>((resolve) => {
+        const testImg = new Image();
+        testImg.crossOrigin = "anonymous";
+        testImg.onload = () => {
+          let pw = testImg.naturalWidth || testImg.width || 1600;
+          let ph = testImg.naturalHeight || testImg.height || 900;
+          if (pw > targetMaxDim || ph > targetMaxDim) {
+            const ratio = targetMaxDim / Math.max(pw, ph);
+            pw = Math.round(pw * ratio);
+            ph = Math.round(ph * ratio);
+          }
+          resolve({ w: Math.max(200, pw), h: Math.max(200, ph) });
+        };
+        testImg.onerror = () => resolve({ w: 1600, h: 900 });
+        testImg.src = photoSrc;
+      });
+      targetWidth = photoDimensions.w;
+      targetHeight = photoDimensions.h;
+    } catch {
+      targetWidth = 1600;
+      targetHeight = 900;
+    }
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
   if (mode === "dark") {
-    const grad = ctx.createRadialGradient(maxWidth / 2, maxHeight / 2, 20, maxWidth / 2, maxHeight / 2, maxWidth * 0.7);
+    const grad = ctx.createRadialGradient(
+      targetWidth / 2,
+      targetHeight / 2,
+      20,
+      targetWidth / 2,
+      targetHeight / 2,
+      Math.max(targetWidth, targetHeight) * 0.7
+    );
     grad.addColorStop(0, "#1e293b");
     grad.addColorStop(1, "#090d16");
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, maxWidth, maxHeight);
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
   } else if (mode === "light") {
-    const grad = ctx.createRadialGradient(maxWidth / 2, maxHeight / 2, 20, maxWidth / 2, maxHeight / 2, maxWidth * 0.7);
+    const grad = ctx.createRadialGradient(
+      targetWidth / 2,
+      targetHeight / 2,
+      20,
+      targetWidth / 2,
+      targetHeight / 2,
+      Math.max(targetWidth, targetHeight) * 0.7
+    );
     grad.addColorStop(0, "#f8fafc");
     grad.addColorStop(1, "#cbd5e1");
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, maxWidth, maxHeight);
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
   } else if (mode === "checker") {
     ctx.fillStyle = "#1e293b";
-    ctx.fillRect(0, 0, maxWidth, maxHeight);
-    const size = 18;
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+    const size = Math.max(16, Math.round(Math.min(targetWidth, targetHeight) / 40));
     ctx.fillStyle = "#334155";
-    for (let x = 0; x < maxWidth; x += size * 2) {
-      for (let y = 0; y < maxHeight; y += size * 2) {
+    for (let x = 0; x < targetWidth; x += size * 2) {
+      for (let y = 0; y < targetHeight; y += size * 2) {
         ctx.fillRect(x, y, size, size);
         ctx.fillRect(x + size, y + size, size, size);
       }
